@@ -1,0 +1,435 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(bnlearn)
+library(igraph)
+library(dplyr)
+
+```
+
+```{r}
+
+# getwd() diretorio atual
+setwd("C:\\Users\\Pichau\\Desktop\\Mestrado_docs\\BENCH\\R")
+
+df_preparado = read.csv("df_discretizado_por_k_kmeans_com_data_novo", header = TRUE, sep = ",")
+
+
+```
+
+```{r}
+df_preparado
+
+```
+
+```{r}
+
+df_preparado$DATA <- as.Date(df_preparado$DATA, format="%Y-%m-%d")
+
+data_corte_treino <- as.Date("2021-04-22")
+data_inicio_teste <- data_corte_treino + 1
+
+df_treino <- df_preparado %>%
+  filter(DATA <= data_corte_treino)
+
+# Criando o conjunto de teste (a partir de 23 de abril de 2021)
+df_teste <- df_preparado %>%
+  filter(DATA >= data_inicio_teste)
+
+```
+
+
+```{r}
+nrow(df_treino)
+nrow(df_teste)
+```
+
+```{r}
+max(df_treino$DATA)
+
+```
+
+```{r}
+df_treino
+```
+
+
+```{r}
+df_treino <- subset(df_treino, select = -X)
+
+
+# Converter colunas de interesse em fatores
+df_treino[, c("temperature_cluster", "humidity_cluster", "pressure_cluster", "cloudCover_cluster", "precipitation_cluster")] <- lapply(
+  df_treino[, c("temperature_cluster", "humidity_cluster", "pressure_cluster", "cloudCover_cluster", "precipitation_cluster")],
+  factor
+)
+
+df_preparado <- subset(df_preparado, select = -X)
+
+# Converter colunas de interesse em fatores
+df_preparado[, c("temperature_cluster", "humidity_cluster", "pressure_cluster", "cloudCover_cluster", "precipitation_cluster")] <- lapply(
+  df_preparado[, c("temperature_cluster", "humidity_cluster", "pressure_cluster", "cloudCover_cluster", "precipitation_cluster")],
+  factor
+)
+
+# Converter colunas de interesse em fatores
+df_teste[, c("temperature_cluster", "humidity_cluster", "pressure_cluster", "cloudCover_cluster", "precipitation_cluster")] <- lapply(
+  df_teste[, c("temperature_cluster", "humidity_cluster", "pressure_cluster", "cloudCover_cluster", "precipitation_cluster")],
+  factor
+)
+
+
+# Excluindo a coluna data. 
+
+df_treino <- df_treino[, !names(df_treino) %in% c("DATA","X")]
+df_teste <- df_teste[, !names(df_teste) %in% c("DATA","X")]
+
+df_preparado <- df_preparado[, !names(df_preparado) %in% c("DATA","X")]
+```
+
+
+```{r}
+df_preparado <- df_preparado[, !names(df_preparado) %in% c("DATA","X")]
+df_preparado
+```
+
+```{r}
+# Visualizar as primeiras linhas do dataframe
+# Renomear as colunas
+df_treino <- df_treino %>%
+  rename(
+    temp = temperature_cluster,
+    rh = humidity_cluster,
+    pmsl = pressure_cluster,
+    cc = cloudCover_cluster,
+    precip = precipitation_cluster
+  )
+
+df_preparado <- df_preparado %>%
+  rename(
+    temp = temperature_cluster,
+    rh = humidity_cluster,
+    pmsl = pressure_cluster,
+    cc = cloudCover_cluster,
+    precip = precipitation_cluster
+  )
+
+df_teste <- df_teste %>%
+  rename(
+    temp = temperature_cluster,
+    rh = humidity_cluster,
+    pmsl = pressure_cluster,
+    cc = cloudCover_cluster,
+    precip = precipitation_cluster
+  )
+
+# Visualizar as primeiras linhas do dataframe após a renomeação
+head(df_preparado, 5)
+
+```
+
+
+
+```{r}
+# Ajustar a estrutura usando hill climbing e BIC
+model_hc_bic <- hc(df_treino, score = "bic")
+
+# Converter o modelo para um objeto igraph usando as funções do bnlearn
+g <- as.igraph(model_hc_bic)
+
+# Visualizar usando igraph com layout em árvore
+plot(g, layout = layout_as_tree(g), vertex.label = V(g)$name, vertex.size = 30, vertex.label.cex = 0.8)
+
+```
+
+
+##########################################################################################################################################################
+
+
+```{r}
+df_teste
+
+```
+
+
+#################################################################################################################################################################
+
+# Modelo usando HC BIC
+
+```{r}
+
+model_hc_bic <- hc(df_treino, score = "bic")
+fitted_model <- bn.fit(model_hc_bic, df_treino)
+predicoes_precip <- predict(fitted_model, node = "precip", data = df_teste)
+
+```
+
+
+# Acuracia
+```{r}
+valores_reais <- df_teste$precip
+acuracia <- sum(predicoes_precip == valores_reais) / length(valores_reais)
+print(paste("Acurácia: ", round(acuracia * 100, 2), "%", sep = ""))
+```
+```{r}
+
+TP <- sum(predicoes_precip == 1 & valores_reais == 1)
+FP <- sum(predicoes_precip == 1 & valores_reais == 0)
+TN <- sum(predicoes_precip == 0 & valores_reais == 0)
+FN <- sum(predicoes_precip == 0 & valores_reais == 1)
+
+
+sensibilidade <- TP / (TP + FN)
+print(paste("Sensibilidade: ", round(sensibilidade * 100, 2), "%", sep = ""))
+
+
+# Especificidade
+especificidade <- TN / (TN + FP)
+print(paste("Especificidade: ", round(especificidade * 100, 2), "%", sep = ""))
+```
+#################################################################################################################################################################
+
+# Modelo usando HC bde
+
+
+```{r}
+
+model_hc_bde <- hc(df_treino, score = "bde")
+
+fitted_model <- bn.fit(model_hc_bde, df_treino)
+
+predicoes_precip <- predict(fitted_model, node = "precip", data = df_teste)
+
+valores_reais <- df_teste$precip
+
+acuracia <- sum(predicoes_precip == valores_reais) / length(valores_reais)
+
+print(paste("Acurácia: ", round(acuracia * 100, 2), "%", sep = ""))
+
+```
+
+```{r}
+TP <- sum(predicoes_precip == 1 & valores_reais == 1)
+FP <- sum(predicoes_precip == 1 & valores_reais == 0)
+TN <- sum(predicoes_precip == 0 & valores_reais == 0)
+FN <- sum(predicoes_precip == 0 & valores_reais == 1)
+
+
+sensibilidade <- TP / (TP + FN)
+print(paste("Sensibilidade: ", round(sensibilidade * 100, 2), "%", sep = ""))
+
+
+# Especificidade
+especificidade <- TN / (TN + FP)
+print(paste("Especificidade: ", round(especificidade * 100, 2), "%", sep = ""))
+```
+
+#################################################################################################################################################################
+
+# Modelo usando MMHC
+
+```{r}
+
+model_mmhc <- mmhc(df_treino)
+
+
+fitted_model <- bn.fit(model_mmhc, df_treino)
+
+predicoes_precip <- predict(fitted_model, node = "precip", data = df_teste)
+
+valores_reais <- df_teste$precip
+
+acuracia <- sum(predicoes_precip == valores_reais) / length(valores_reais)
+
+print(paste("Acurácia: ", round(acuracia * 100, 2), "%", sep = ""))
+
+```
+
+```{r}
+TP <- sum(predicoes_precip == 1 & valores_reais == 1)
+FP <- sum(predicoes_precip == 1 & valores_reais == 0)
+TN <- sum(predicoes_precip == 0 & valores_reais == 0)
+FN <- sum(predicoes_precip == 0 & valores_reais == 1)
+
+
+sensibilidade <- TP / (TP + FN)
+print(paste("Sensibilidade: ", round(sensibilidade * 100, 2), "%", sep = ""))
+
+
+# Especificidade
+especificidade <- TN / (TN + FP)
+print(paste("Especificidade: ", round(especificidade * 100, 2), "%", sep = ""))
+```
+#################################################################################################################################################################
+
+
+# Modelo usando rsmax2
+
+```{r}
+
+model_rsmax2 <- rsmax2(df_treino)
+
+
+fitted_model <- bn.fit(model_rsmax2, df_treino)
+
+predicoes_precip <- predict(fitted_model, node = "precip", data = df_teste)
+
+valores_reais <- df_teste$precip
+
+acuracia <- sum(predicoes_precip == valores_reais) / length(valores_reais)
+
+print(paste("Acurácia: ", round(acuracia * 100, 2), "%", sep = ""))
+
+```
+```{r}
+TP <- sum(predicoes_precip == 1 & valores_reais == 1)
+FP <- sum(predicoes_precip == 1 & valores_reais == 0)
+TN <- sum(predicoes_precip == 0 & valores_reais == 0)
+FN <- sum(predicoes_precip == 0 & valores_reais == 1)
+
+
+sensibilidade <- TP / (TP + FN)
+print(paste("Sensibilidade: ", round(sensibilidade * 100, 2), "%", sep = ""))
+
+
+# Especificidade
+especificidade <- TN / (TN + FP)
+print(paste("Especificidade: ", round(especificidade * 100, 2), "%", sep = ""))
+```
+
+
+#################################################################################################################################################################
+
+
+# Modelo usando H2PC
+
+```{r}
+
+model_h2pc <- h2pc(df_treino)
+
+fitted_model <- bn.fit(model_h2pc, df_treino)
+
+predicoes_precip <- predict(fitted_model, node = "precip", data = df_teste)
+
+valores_reais <- df_teste$precip
+
+acuracia <- sum(predicoes_precip == valores_reais) / length(valores_reais)
+
+print(paste("Acurácia: ", round(acuracia * 100, 2), "%", sep = ""))
+
+```
+```{r}
+TP <- sum(predicoes_precip == 1 & valores_reais == 1)
+FP <- sum(predicoes_precip == 1 & valores_reais == 0)
+TN <- sum(predicoes_precip == 0 & valores_reais == 0)
+FN <- sum(predicoes_precip == 0 & valores_reais == 1)
+
+
+sensibilidade <- TP / (TP + FN)
+print(paste("Sensibilidade: ", round(sensibilidade * 100, 2), "%", sep = ""))
+
+
+# Especificidade
+especificidade <- TN / (TN + FP)
+print(paste("Especificidade: ", round(especificidade * 100, 2), "%", sep = ""))
+```
+#################################################################################################################################################################
+
+```{r}
+# Ajusta o modelo utilizando a Estimativa Bayesiana
+model_hc_bic <- hc(df_treino, score = "bic")
+fitted_model <- bn.fit(model_hc_bic, df_treino, method = "bayes")
+
+# Exibe a Tabela de Probabilidade Condicional para todos os nós
+for (node in names(fitted_model)) {
+  cat("Tabela de Probabilidade Condicional para o nó:", node, "\n")
+  print(fitted_model[[node]]$prob)
+  cat("\n---------------------------------\n")
+}
+
+```
+
+Relação entre temperatura e chuva
+```{r}
+# Ajusta a estrutura do modelo e força uma relação apenas entre temp e precip
+model_hc_bic <- hc(df_treino, score = "bic")
+model_hc_bic <- set.arc(model_hc_bic, from = "temp", to = "precip")
+
+# Remova quaisquer dependências de 'precip' com 'rh' (ou outras variáveis) para focar somente em 'temp'
+model_hc_bic <- drop.arc(model_hc_bic, from = "rh", to = "precip")
+
+# Ajusta o modelo com Estimativa Bayesiana
+fitted_model <- bn.fit(model_hc_bic, df_treino, method = "bayes")
+
+# Exibe a Tabela de Probabilidade Condicional (CPT) para precip condicionada apenas a temp
+cat("Tabela de Probabilidade Condicional para precip condicionada a temp:\n")
+print(fitted_model$precip$prob)
+cat("\n---------------------------------\n")
+
+
+```
+
+
+```{r}
+# Ajusta a estrutura do modelo e força uma relação entre temp e precip
+model_hc_bic <- hc(df_treino, score = "bic")
+model_hc_bic <- set.arc(model_hc_bic, from = "temp", to = "precip")
+
+# Ajusta o modelo com Estimativa Bayesiana
+fitted_model <- bn.fit(model_hc_bic, df_treino, method = "bayes")
+
+# Exibe a Tabela de Probabilidade Condicional (CPT) para precip considerando temp e rh (se aplicável)
+cat("Tabela de Probabilidade Condicional para precip condicionada a temp (e rh se aplicável):\n")
+print(fitted_model$precip$prob)
+cat("\n---------------------------------\n")
+
+
+
+```
+
+
+```{r}
+# Ajusta a estrutura do modelo e força a relação entre temp, cc e precip
+model_hc_bic <- hc(df_treino, score = "bic")
+model_hc_bic <- set.arc(model_hc_bic, from = "temp", to = "precip")
+model_hc_bic <- set.arc(model_hc_bic, from = "cc", to = "precip")
+
+# Remove arcos adicionais para manter apenas as dependências entre temp, cc e precip
+model_hc_bic <- drop.arc(model_hc_bic, from = "rh", to = "precip")
+model_hc_bic <- drop.arc(model_hc_bic, from = "pmsl", to = "precip")
+
+# Ajusta o modelo com Estimativa Bayesiana
+fitted_model <- bn.fit(model_hc_bic, df_treino, method = "bayes")
+
+# Exibe a Tabela de Probabilidade Condicional (CPT) para precip condicionada a temp e cc
+cat("Tabela de Probabilidade Condicional para precip condicionada a temp e cc:\n")
+print(fitted_model$precip$prob)
+cat("\n---------------------------------\n")
+
+
+```
+
+```{r}
+# Ajusta a estrutura do modelo e define as relações com precip
+model_hc_bic <- hc(df_treino, score = "bic")
+model_hc_bic <- set.arc(model_hc_bic, from = "temp", to = "precip")
+model_hc_bic <- set.arc(model_hc_bic, from = "cc", to = "precip")
+model_hc_bic <- set.arc(model_hc_bic, from = "rh", to = "precip")
+
+# Ajusta o modelo com Estimativa Bayesiana
+fitted_model <- bn.fit(model_hc_bic, df_treino, method = "bayes")
+
+# Exibe a Tabela de Probabilidade Condicional (CPT) para precip condicionada a temp, cc e rh
+cat("Tabela de Probabilidade Condicional para precip condicionada a temp, cc e rh:\n")
+print(fitted_model$precip$prob)
+cat("\n---------------------------------\n")
+
+
+```
+
+
+

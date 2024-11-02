@@ -1,0 +1,187 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+# A biblioteca bnlearn precisa da versão do R maior que (≥ 4.4.0).
+# Para ver sua versão atual:  R.version.string
+```{r}
+#install.packages("bnlearn")
+#install.packages("igraph")
+
+library(bnlearn)
+library(igraph)
+library(dplyr)
+
+
+```
+
+```{r}
+
+# getwd() diretorio atual
+setwd("C:\\Users\\Pichau\\Desktop\\Mestrado_docs\\BENCH\\R")
+
+df_preparado = read.csv("df_discretizado_por_k_kmeans", header = TRUE, sep = ",")
+
+
+df_preparado <- subset(df_preparado, select = -X)
+
+# Converter colunas de interesse em fatores
+df_preparado[, c("temperature_cluster", "humidity_cluster", "pressure_cluster", "cloudCover_cluster", "precipitation_cluster")] <- lapply(
+  df_preparado[, c("temperature_cluster", "humidity_cluster", "pressure_cluster", "cloudCover_cluster", "precipitation_cluster")],
+  factor
+)
+
+```
+
+```{r}
+df_preparado
+```
+
+
+```{r}
+# Visualizar as primeiras linhas do dataframe
+# Renomear as colunas
+df_preparado <- df_preparado %>%
+  rename(
+    temp = temperature_cluster,
+    rh = humidity_cluster,
+    pmsl = pressure_cluster,
+    cc = cloudCover_cluster,
+    precip = precipitation_cluster
+  )
+
+# Visualizar as primeiras linhas do dataframe após a renomeação
+head(df_preparado, 5)
+
+
+
+```
+
+
+
+```{r}
+# Ajustar a estrutura usando hill climbing e BIC
+model_hc_bic <- hc(df_preparado, score = "bic")
+
+# Converter o modelo para um objeto igraph usando as funções do bnlearn
+g <- as.igraph(model_hc_bic)
+
+# Visualizar usando igraph com layout em árvore
+plot(g, layout = layout_as_tree(g), vertex.label = V(g)$name, vertex.size = 30, vertex.label.cex = 0.8)
+
+```
+```{r}
+model_hc_bde <- hc(df_preparado, score = "bde")
+
+# Converter o modelo para um objeto igraph usando as funções do bnlearn
+g <- as.igraph(model_hc_bde)
+
+# Visualizar usando igraph com layout em árvore
+plot(g, layout = layout_as_tree(g), vertex.label = V(g)$name, vertex.size = 30, vertex.label.cex = 0.8)
+
+
+```
+
+```{r}
+# Ajustar a estrutura usando o algoritmo MMHC
+
+model_mmhc <- mmhc(df_preparado)
+
+
+# Converter o modelo para um objeto igraph usando as funções do bnlearn
+g <- as.igraph(model_mmhc)
+
+# Visualizar usando igraph com layout em árvore
+plot(g, layout = layout_as_tree(g), vertex.label = V(g)$name, vertex.size = 30, vertex.label.cex = 0.8)
+
+```
+
+```{r}
+# Ajustar a estrutura usando o algoritmo MMHC
+
+model_rsmax2 <- rsmax2(df_preparado)
+
+
+# Converter o modelo para um objeto igraph usando as funções do bnlearn
+g <- as.igraph(model_rsmax2)
+
+# Visualizar usando igraph com layout em árvore
+plot(g, layout = layout_as_tree(g), vertex.label = V(g)$name, vertex.size = 30, vertex.label.cex = 0.8)
+```
+
+```{r}
+# Ajustar a estrutura usando o algoritmo MMHC
+
+model_h2pc <- h2pc(df_preparado)
+
+
+# Converter o modelo para um objeto igraph usando as funções do bnlearn
+g <- as.igraph(model_h2pc)
+
+# Visualizar usando igraph com layout em árvore
+plot(g, layout = layout_as_tree(g), vertex.label = V(g)$name, vertex.size = 30, vertex.label.cex = 0.8)
+```
+
+
+```{r}
+
+
+model_hc_k2 <- hc(df_preparado, score = "k2")
+
+# Converter o modelo para um objeto igraph usando as funções do bnlearn
+g <- as.igraph(model_hc_k2)
+
+
+# Visualizar usando igraph com layout em árvore
+plot(g, layout = layout_as_tree(g), vertex.label = V(g)$name, vertex.size = 30, vertex.label.cex = 0.8)
+```
+
+
+```{r}
+
+model_hc_ll <- hc(df_preparado, score = "loglik")
+
+# Converter o modelo para um objeto igraph usando as funções do bnlearn
+g <- as.igraph(model_hc_ll)
+
+
+# Visualizar usando igraph com layout em árvore
+plot(g, layout = layout_as_tree(g), vertex.label = V(g)$name, vertex.size = 30, vertex.label.cex = 0.8)
+
+
+```
+
+
+```{r}
+model_hc_aic <- hc(df_preparado, score = "aic")
+
+# Converter o modelo para um objeto igraph usando as funções do bnlearn
+g <- as.igraph(model_hc_aic)
+
+
+# Visualizar usando igraph com layout em árvore
+plot(g, layout = layout_as_tree(g), vertex.label = V(g)$name, vertex.size = 30, vertex.label.cex = 0.8)
+
+
+
+```
+
+
+
+# Como no artigo os melhores valores de sensibilidade e especificidade foram do (HC-BIC, HC-BDE, MMHC, RSMAX2, H2PC) e foi minhas estruturas parecidas,
+irei utilizar somente eles para previsão. 
+
+# Na extração dos dados, em vez de utilizar a média da precipitação e usar a soma, eu chego em estruturas parecidas ? Chego nas mesmas estruturas quanto comparado a média de precipitação. 
+
+# as estruturas geradas pelo treino e teste sao iguais. 
+
+```{r}
+
+```
+
+
+```{r}
+
+```
