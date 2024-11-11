@@ -1,0 +1,182 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+ this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(bnlearn)
+library(igraph)
+library(dplyr)
+
+```
+
+
+```{r}
+
+# getwd() diretorio atual
+setwd("C:\\Users\\Pichau\\Desktop\\Mestrado_docs\\BENCH\\R")
+
+df_preparado = read.csv("df_discretizado_por_k_kmeans_com_data_novo", header = TRUE, sep = ",")
+
+
+```
+
+```{r}
+df_preparado
+
+```
+
+```{r}
+
+df_preparado$DATA <- as.Date(df_preparado$DATA, format="%Y-%m-%d")
+
+data_corte_treino <- as.Date("2021-04-22")
+data_inicio_teste <- data_corte_treino + 1
+
+df_treino <- df_preparado %>%
+  filter(DATA <= data_corte_treino)
+
+# Criando o conjunto de teste (a partir de 23 de abril de 2021)
+df_teste <- df_preparado %>%
+  filter(DATA >= data_inicio_teste)
+
+```
+
+
+```{r}
+nrow(df_treino)
+nrow(df_teste)
+```
+
+```{r}
+max(df_treino$DATA)
+
+```
+
+```{r}
+max(df_teste$DATA)
+
+```
+
+
+```{r}
+df_treino
+```
+
+
+```{r}
+df_treino <- subset(df_treino, select = -X)
+
+
+# Converter colunas de interesse em fatores
+df_treino[, c("temperature_cluster", "humidity_cluster", "pressure_cluster", "cloudCover_cluster", "precipitation_cluster")] <- lapply(
+  df_treino[, c("temperature_cluster", "humidity_cluster", "pressure_cluster", "cloudCover_cluster", "precipitation_cluster")],
+  factor
+)
+
+df_preparado <- subset(df_preparado, select = -X)
+
+# Converter colunas de interesse em fatores
+df_preparado[, c("temperature_cluster", "humidity_cluster", "pressure_cluster", "cloudCover_cluster", "precipitation_cluster")] <- lapply(
+  df_preparado[, c("temperature_cluster", "humidity_cluster", "pressure_cluster", "cloudCover_cluster", "precipitation_cluster")],
+  factor
+)
+
+# Converter colunas de interesse em fatores
+df_teste[, c("temperature_cluster", "humidity_cluster", "pressure_cluster", "cloudCover_cluster", "precipitation_cluster")] <- lapply(
+  df_teste[, c("temperature_cluster", "humidity_cluster", "pressure_cluster", "cloudCover_cluster", "precipitation_cluster")],
+  factor
+)
+
+
+# Excluindo a coluna data. 
+
+df_treino <- df_treino[, !names(df_treino) %in% c("DATA","X")]
+df_teste <- df_teste[, !names(df_teste) %in% c("DATA","X")]
+
+df_preparado <- df_preparado[, !names(df_preparado) %in% c("DATA","X")]
+```
+
+
+```{r}
+df_preparado <- df_preparado[, !names(df_preparado) %in% c("DATA","X")]
+df_preparado
+```
+
+```{r}
+# Visualizar as primeiras linhas do dataframe
+# Renomear as colunas
+df_treino <- df_treino %>%
+  rename(
+    temp = temperature_cluster,
+    rh = humidity_cluster,
+    pmsl = pressure_cluster,
+    cc = cloudCover_cluster,
+    precip = precipitation_cluster
+  )
+
+df_preparado <- df_preparado %>%
+  rename(
+    temp = temperature_cluster,
+    rh = humidity_cluster,
+    pmsl = pressure_cluster,
+    cc = cloudCover_cluster,
+    precip = precipitation_cluster
+  )
+
+df_teste <- df_teste %>%
+  rename(
+    temp = temperature_cluster,
+    rh = humidity_cluster,
+    pmsl = pressure_cluster,
+    cc = cloudCover_cluster,
+    precip = precipitation_cluster
+  )
+
+# Visualizar as primeiras linhas do dataframe após a renomeação
+head(df_preparado, 5)
+
+```
+##############################################################################################################################################################
+##############################################################################################################################################################
+##############################################################################################################################################################
+##############################################################################################################################################################
+##############################################################################################################################################################
+##############################################################################################################################################################
+##############################################################################################################################################################
+##############################################################################################################################################################
+
+```{r}
+df_treino$temp <- as.numeric(as.character(df_treino$temp))
+df_treino$rh <- as.numeric(as.character(df_treino$rh))
+df_treino$pmsl <- as.numeric(as.character(df_treino$pmsl))
+df_treino$cc <- as.numeric(as.character(df_treino$cc))
+
+```
+
+
+```{r}
+
+
+modelo_logistico <- glm(precip ~ ., data = df_treino, family=binomial(link=logit))
+modelo_logistico
+
+summary(modelo_logistico)
+
+```
+
+
+# Razão de chances para pmsl
+```{r}
+exp(0.10286)
+
+# Como pmsl vai de 0 (baixa pressão) a 2 (alta pressão), cada aumento de um nível (por exemplo, de baixa para média, ou de média para alta) aumenta a chance de # chover em cerca de 10,8% (o que é dado pela razão de chances de 1.1084).
+
+```
